@@ -80,6 +80,20 @@ type BlobContent struct {
 	Encoding string `json:"encoding,omitempty"` // utf-8 | base64
 }
 
+type BlameLine struct {
+	Line       int    `json:"line"`
+	Content    string `json:"content"`
+	CommitSHA  string `json:"commit_sha"`
+	AuthorName string `json:"author_name"`
+	AuthoredAt string `json:"authored_at"`
+}
+
+type BlameResult struct {
+	Path  string      `json:"path"`
+	Ref   string      `json:"ref"`
+	Lines []BlameLine `json:"lines"`
+}
+
 type CommitDiff struct {
 	SHA     string     `json:"sha"`
 	Message string     `json:"message"`
@@ -123,6 +137,8 @@ type GitRepository interface {
 	ListTree(repoPath, ref, path string) ([]TreeEntry, error)
 
 	GetBlob(repoPath, ref, path string) (*BlobContent, error)
+
+	GetBlame(repoPath, ref, path string) (*BlameResult, error)
 
 	GetCommitDiff(repoPath, sha string) (*CommitDiff, error)
 

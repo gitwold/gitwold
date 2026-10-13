@@ -3,8 +3,8 @@ import { ref } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
 import { useAuth } from '@/composables/useAuth'
 import { localizeError } from '@/i18n'
+import AppFooter from '@/components/AppFooter.vue'
 import Icon from '@/components/ui/Icon.vue'
-import LocaleSwitch from '@/components/LocaleSwitch.vue'
 
 const auth = useAuth()
 const router = useRouter()
@@ -33,10 +33,7 @@ async function submit() {
 
 <template>
   <div class="flex min-h-screen flex-col bg-paper">
-    <div class="flex justify-end px-4 py-3">
-      <LocaleSwitch />
-    </div>
-    <div class="flex flex-1 items-start justify-center px-4 pb-16">
+    <div class="flex flex-1 items-start justify-center px-4 py-16">
       <div class="w-full max-w-sm">
         <div class="mb-6 flex flex-col items-center gap-2 text-header">
           <span class="scale-150"><Icon name="mark" /></span>
@@ -89,5 +86,6 @@ async function submit() {
         </p>
       </div>
     </div>
+    <AppFooter />
   </div>
 </template>

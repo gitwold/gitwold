@@ -6,9 +6,12 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"path"
 	"path/filepath"
+	"strconv"
 	"strings"
+	"time"
 	"unicode/utf8"
 
 	gogit "github.com/go-git/go-git/v6"
@@ -248,6 +251,65 @@ func (r *Repository) GetBlob(repoPath, ref, filePath string) (*domain.BlobConten
 	}
 
 	return out, nil
+}
+
+func (r *Repository) GetBlame(repoPath, ref, filePath string) (*domain.BlameResult, error) {
+	filePath = strings.Trim(filePath, "/")
+	if filePath == "" {
+		return nil, fmt.Errorf("path required")
+	}
+
+	if strings.TrimSpace(ref) == "" {
+		ref = "HEAD"
+	}
+
+	cmd := exec.Command("git", "--git-dir", repoPath, "blame", "--line-porcelain", ref, "--", filePath)
+	out, err := cmd.Output()
+	if err != nil {
+		return nil, fmt.Errorf("blame: %w", err)
+	}
+
+	result := &domain.BlameResult{Path: filePath, Ref: ref, Lines: []domain.BlameLine{}}
+	var (
+		sha, author string
+		authoredAt  string
+		lineNo      int
+	)
+
+	for raw := range strings.SplitSeq(string(out), "\n") {
+		if strings.HasPrefix(raw, "\t") {
+			lineNo++
+			result.Lines = append(result.Lines, domain.BlameLine{
+				Line:       lineNo,
+				Content:    strings.TrimPrefix(raw, "\t"),
+				CommitSHA:  sha,
+				AuthorName: author,
+				AuthoredAt: authoredAt,
+			})
+
+			continue
+		}
+
+		if len(raw) >= 40 && !strings.Contains(raw[:40], " ") {
+			fields := strings.Fields(raw)
+			if len(fields) > 0 && len(fields[0]) >= 40 {
+				sha = fields[0]
+			}
+			continue
+		}
+
+		if after, ok := strings.CutPrefix(raw, "author "); ok {
+			author = after
+			continue
+		}
+
+		if after, ok := strings.CutPrefix(raw, "author-time "); ok {
+			sec, _ := strconv.ParseInt(after, 10, 64)
+			authoredAt = time.Unix(sec, 0).UTC().Format(time.RFC3339)
+		}
+	}
+
+	return result, nil
 }
 
 func (r *Repository) GetCommitDiff(repoPath, sha string) (*domain.CommitDiff, error) {

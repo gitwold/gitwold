@@ -192,7 +192,7 @@ func (s *Server) runGitCommand(conn *ssh.ServerConn, channel ssh.Channel, comman
 	}
 
 	if service == usecase.GitReceivePack {
-		_ = s.git.TouchActivity(repo.ID)
+		_ = s.git.TouchActivity(repo, viewer.ID)
 	}
 
 	return 0

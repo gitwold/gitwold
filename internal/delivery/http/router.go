@@ -19,6 +19,7 @@ func NewRouter(
 	pullHandler *handler.PullRequestHandler,
 	profileHandler *handler.ProfileHandler,
 	orgHandler *handler.OrganizationHandler,
+	activityHandler *handler.ActivityHandler,
 	auth middleware.Authenticator,
 ) http.Handler {
 	mux := http.NewServeMux()
@@ -89,8 +90,11 @@ func NewRouter(
 		if issueHandler.Handle(w, r) {
 			return
 		}
-		repoHandler.Move(w, r)
+		repoHandler.DispatchPost(w, r)
 	})))
+
+	mux.Handle("GET /api/activity", requireAuth(http.HandlerFunc(activityHandler.ListMine)))
+	mux.Handle("GET /api/activity/{owner}", optionalAuth(http.HandlerFunc(activityHandler.ListOwner)))
 
 	mux.Handle("POST /api/folders", requireAuth(http.HandlerFunc(folderHandler.Create)))
 	mux.Handle("GET /api/folders", requireAuth(http.HandlerFunc(folderHandler.List)))
@@ -117,7 +121,7 @@ func NewRouter(
 			gitHTTP.ServeHTTP(w, r)
 			return
 		}
-		
+
 		api.ServeHTTP(w, r)
 	})
 }

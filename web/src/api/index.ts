@@ -1,5 +1,9 @@
 import { api } from './client'
-import type { BlobContent, CommitDiff, CommitInfo, Folder, FolderContents, FolderTreeNode, Issue, IssueComment, IssueDetail, Label, OrgMember, Organization, Profile, PullCompare, PullDetail, PullRequest, RefInfo, RepoStats, Repository, RepoSummary, SSHKey, TreeEntry, User } from './types'
+import type { AccessToken, ActivityEvent, BlobContent, BlameResult, CommitDiff, CommitInfo, CreateAccessTokenResponse, Folder, FolderContents, FolderTreeNode, Issue, IssueComment, IssueDetail, Label, OrgMember, Organization, Profile, PullCompare, PullDetail, PullRequest, RefInfo, RepoStats, Repository, RepoSummary, SSHKey, TreeEntry, User } from './types'
+
+function folderOrgQuery(organization?: string) {
+  return organization ? `organization=${encodeURIComponent(organization)}` : ''
+}
 
 export const authApi = {
   register(body: {
@@ -32,29 +36,70 @@ export const authApi = {
 }
 
 export const foldersApi = {
-  list(parentId?: number | null) {
-    const q = parentId != null ? `?parent_id=${parentId}` : ''
+  list(parentId?: number | null, organization?: string) {
+    const params = new URLSearchParams()
+    if (parentId != null) {
+      params.set('parent_id', String(parentId))
+    }
+
+    if (organization) {
+      params.set('organization', organization)
+    }
+    
+    const qs = params.toString()
     return api<{
       folders: Folder[]
-    }>(`/api/folders${q}`)
+    }>(`/api/folders${qs ? `?${qs}` : ''}`)
   },
-  tree() {
+  tree(organization?: string) {
+    const params = new URLSearchParams({ tree: '1' })
+    if (organization) {
+      params.set('organization', organization)
+    }
     return api<{
       tree: FolderTreeNode[]
-    }>('/api/folders?tree=1')
+    }>(`/api/folders?${params}`)
   },
-  get(id: number) {
-    return api<FolderContents>(`/api/folders/${id}`)
+  get(id: number, organization?: string) {
+    const qs = folderOrgQuery(organization)
+    return api<FolderContents>(`/api/folders/${id}${qs ? `?${qs}` : ''}`)
   },
   create(body: {
-    name: string;
-    parent_id?: number | null;
+    name: string
+    parent_id?: number | null
     path?: string
+    organization?: string
   }) {
     return api<Folder>('/api/folders', {
       method: 'POST',
       body: JSON.stringify(body)
     })
+  },
+}
+
+export const activityApi = {
+  listMine(limit = 30) {
+    const q = new URLSearchParams({ limit: String(limit) })
+    return api<{ events: ActivityEvent[] }>(`/api/activity?${q}`)
+  },
+  listOwner(owner: string, limit = 30) {
+    const q = new URLSearchParams({ limit: String(limit) })
+    return api<{ events: ActivityEvent[] }>(`/api/activity/${encodeURIComponent(owner)}?${q}`)
+  },
+}
+
+export const tokensApi = {
+  list() {
+    return api<{ tokens: AccessToken[] }>('/api/tokens')
+  },
+  create(body: { name: string }) {
+    return api<CreateAccessTokenResponse>('/api/tokens', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    })
+  },
+  revoke(id: number) {
+    return api<void>(`/api/tokens/${id}`, { method: 'DELETE' })
   },
 }
 
@@ -181,6 +226,12 @@ export const reposApi = {
       body: JSON.stringify({ folder_id }),
     })
   },
+  transfer(owner: string, path: string, body: { organization: string }) {
+    return api<Repository>(`/api/repos/${owner}/${path}/transfer`, {
+      method: 'POST',
+      body: JSON.stringify(body),
+    })
+  },
   remove(owner: string, path: string) {
     return api<void>(`/api/repos/${owner}/${path}`, {
       method: 'DELETE'
@@ -232,6 +283,10 @@ export const reposApi = {
   blob(owner: string, path: string, params: { ref: string; path: string }) {
     const q = new URLSearchParams({ ref: params.ref, path: params.path })
     return api<BlobContent>(`/api/repos/${owner}/${path}/blob?${q}`)
+  },
+  blame(owner: string, path: string, params: { ref: string; path: string }) {
+    const q = new URLSearchParams({ ref: params.ref, path: params.path })
+    return api<BlameResult>(`/api/repos/${owner}/${path}/blame?${q}`)
   },
   readme(owner: string, path: string, ref?: string) {
     const q = ref ? `?ref=${encodeURIComponent(ref)}` : ''

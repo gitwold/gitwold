@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, inject, onUnmounted, ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import { foldersApi } from '@/api'
 import type { Folder, RepoSummary } from '@/api/types'
 import ContentsList from '@/components/ContentsList.vue'
@@ -11,7 +12,9 @@ import { localizeError } from '@/i18n'
 
 const props = defineProps<{ id: string }>()
 
+const route = useRoute()
 const auth = useAuth()
+const organization = computed(() => (route.query.organization as string) || '')
 const { setBreadcrumbs, clearBreadcrumbs } = useBreadcrumbs()
 const reloadSidebar = inject<() => void>('reloadSidebar', () => {})
 
@@ -29,16 +32,25 @@ async function load() {
   loading.value = true
   error.value = ''
   try {
-    const res = await foldersApi.get(folderId.value)
+    const res = await foldersApi.get(folderId.value, organization.value || undefined)
     folder.value = res.folder ?? null
     folders.value = res.folders ?? []
     repos.value = res.repos ?? []
 
-    const owner = auth.user.value?.username || ''
-    const crumbs: Crumb[] = [{
-      label: owner,
-      to: '/'
-    }]
+    const crumbs: Crumb[] = organization.value
+      ? [{
+          label: organization.value,
+          to: { 
+            name: 'org', 
+            params: { 
+              slug: organization.value 
+            } 
+          },
+        }]
+      : [{
+          label: auth.user.value?.username || '',
+          to: '/',
+        }]
     if (folder.value?.path) {
       folder.value.path.split('/').forEach((part) => {
         crumbs.push({ label: part })
@@ -57,7 +69,7 @@ function onCreated() {
   load()
 }
 
-watch(() => props.id, load, { immediate: true })
+watch(() => [props.id, route.query.organization], load, { immediate: true })
 onUnmounted(clearBreadcrumbs)
 </script>
 
@@ -89,17 +101,21 @@ onUnmounted(clearBreadcrumbs)
       :folders="folders"
       :repos="repos"
       :folder-path="folder?.path || ''"
+      :repo-owner="organization || auth.user.value?.username"
+      :organization="organization || undefined"
     />
 
     <CreateFolderModal
       v-if="showFolderModal"
       :parent-id="folderId"
+      :organization="organization || undefined"
       @close="showFolderModal = false"
       @created="onCreated"
     />
     <CreateRepoModal
       v-if="showRepoModal"
       :folder-id="folderId"
+      :organization="organization || undefined"
       @close="showRepoModal = false"
       @created="onCreated"
     />

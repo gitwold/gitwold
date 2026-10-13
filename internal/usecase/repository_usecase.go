@@ -74,12 +74,22 @@ type RepositoryItem struct {
 	UpdatedAt      time.Time  `json:"updated_at"`
 }
 
+type TransferRepositoryInput struct {
+	ViewerID      uint
+	OwnerUsername string
+	FolderPath    string
+	Name          string
+	Organization  string
+	BasePath      string
+}
+
 type RepositoryUseCase struct {
-	store   domain.RepositoryStore
-	folders domain.FolderStore
-	users   domain.UserStore
-	orgs    domain.OrganizationStore
-	git     domain.GitRepository
+	store    domain.RepositoryStore
+	folders  domain.FolderStore
+	users    domain.UserStore
+	orgs     domain.OrganizationStore
+	git      domain.GitRepository
+	activity domain.ActivityStore
 }
 
 func NewRepositoryUseCase(
@@ -88,13 +98,15 @@ func NewRepositoryUseCase(
 	users domain.UserStore,
 	orgs domain.OrganizationStore,
 	git domain.GitRepository,
+	activity domain.ActivityStore,
 ) *RepositoryUseCase {
 	return &RepositoryUseCase{
-		store:   store,
-		folders: folders,
-		users:   users,
-		orgs:    orgs,
-		git:     git,
+		store:    store,
+		folders:  folders,
+		users:    users,
+		orgs:     orgs,
+		git:      git,
+		activity: activity,
 	}
 }
 
@@ -198,6 +210,105 @@ func (uc *RepositoryUseCase) Create(in CreateRepositoryInput) (*RepositoryItem, 
 	}
 
 	item := toRepositoryItem(repo, ownerSlug, folderPath)
+	var orgID *uint
+	if ownerKind == domain.OwnerKindOrg {
+		id := ownerID
+		orgID = &id
+	}
+
+	recordActivity(uc.activity, &domain.ActivityEvent{
+		ActorID:   viewerID,
+		OwnerKind: ownerKind,
+		OwnerID:   ownerID,
+		RepoID:    &repo.ID,
+		OrgID:     orgID,
+		Type:      domain.ActivityRepoCreate,
+		Summary:   activitySummary("created repository %s", name),
+	})
+
+	return &item, nil
+}
+
+func (uc *RepositoryUseCase) Transfer(in TransferRepositoryInput) (*RepositoryItem, error) {
+	if in.ViewerID == 0 {
+		return nil, ErrUnauthorized
+	}
+
+	orgSlug := strings.ToLower(strings.TrimSpace(in.Organization))
+	if orgSlug == "" {
+		return nil, ErrOrgSlugRequired
+	}
+
+	repo, ownerSlug, _, err := uc.resolve(ResolveRepositoryInput{
+		OwnerUsername: in.OwnerUsername,
+		FolderPath:    in.FolderPath,
+		Name:          in.Name,
+		ViewerID:      in.ViewerID,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	kind := repo.OwnerKind
+	if kind == "" {
+		kind = domain.OwnerKindUser
+	}
+
+	if kind != domain.OwnerKindUser || repo.OwnerID != in.ViewerID {
+		return nil, ErrRepoForbidden
+	}
+
+	org, err := uc.orgs.FindBySlug(orgSlug)
+	if err != nil {
+		return nil, ErrOrgNotFound
+	}
+
+	member, err := uc.orgs.FindMember(org.ID, in.ViewerID)
+	if err != nil || !orgRoleAtLeast(member.Role, domain.OrgRoleAdmin) {
+		return nil, ErrOrgForbidden
+	}
+
+	exists, err := uc.store.ExistsByOwnerFolderName(domain.OwnerKindOrg, org.ID, nil, repo.Name)
+	if err != nil {
+		return nil, err
+	}
+
+	if exists {
+		return nil, ErrAlreadyExists
+	}
+
+	basePath := in.BasePath
+	if basePath == "" {
+		basePath = filepath.Join("data", "repos")
+	}
+
+	oldPath := repo.Path
+	newPath := buildRepoDiskPath(basePath, domain.OwnerKindOrg, org.ID, "", repo.Name)
+	if err := uc.git.Move(oldPath, newPath); err != nil {
+		return nil, fmt.Errorf("move repository files: %w", err)
+	}
+
+	repo.OwnerKind = domain.OwnerKindOrg
+	repo.OwnerID = org.ID
+	repo.FolderID = nil
+	repo.Path = newPath
+	if err := uc.store.Update(repo); err != nil {
+		_ = uc.git.Move(newPath, oldPath)
+		return nil, fmt.Errorf("update repository metadata: %w", err)
+	}
+
+	orgID := org.ID
+	recordActivity(uc.activity, &domain.ActivityEvent{
+		ActorID:   in.ViewerID,
+		OwnerKind: domain.OwnerKindOrg,
+		OwnerID:   org.ID,
+		RepoID:    &repo.ID,
+		OrgID:     &orgID,
+		Type:      domain.ActivityTransfer,
+		Summary:   activitySummary("transferred %s from %s to %s", repo.Name, ownerSlug, org.Slug),
+	})
+	item := toRepositoryItem(repo, org.Slug, "")
+
 	return &item, nil
 }
 
@@ -609,7 +720,7 @@ func buildRepoDiskPath(basePath, ownerKind string, ownerID uint, folderPath, nam
 	if folderPath != "" {
 		parts = append(parts, strings.Split(folderPath, "/")...)
 	}
-	
+
 	parts = append(parts, name+".git")
 	return filepath.Join(parts...)
 }

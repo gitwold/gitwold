@@ -11,6 +11,9 @@
     "bytes": "{n} bytes",
     "sizeB": "{n} B"
   },
+  "footer": {
+
+  },
   "auth": {
     "loginLead": "Sign in to your filesystem of repositories.",
     "loginTitle": "Log in",
@@ -42,6 +45,7 @@
     "code": "Code",
     "profile": "Profile",
     "sshKeys": "SSH keys",
+    "accessTokens": "Access tokens",
     "orgs": "Organizations"
   },
   "home": {
@@ -75,7 +79,9 @@
   "blob": {
     "tree": "Tree",
     "raw": "Raw",
-    "binary": "Binary file - open Raw to download."
+    "binary": "Binary file - open Raw to download.",
+    "blame": "Blame",
+    "hideBlame": "Hide blame"
   },
   "commits": {
     "title": "Commits",
@@ -110,7 +116,14 @@
     "dangerText": "Permanently delete this repository and its git data.",
     "deleting": "Deleting...",
     "delete": "Delete repository",
-    "confirmDelete": "Delete repository {path}? This cannot be undone."
+    "confirmDelete": "Delete repository {path}? This cannot be undone.",
+    "transfer": "Transfer to organization",
+    "transferLead": "Move this repository into an organization you belong to.",
+    "transferOrg": "Organization",
+    "transferPick": "Select organization",
+    "transferring": "Transferring...",
+    "transferAction": "Transfer repository",
+    "transferred": "Repository transferred"
   },
   "modal": {
     "newFolder": "New folder",
@@ -122,7 +135,28 @@
     "description": "Description",
     "optional": "Optional",
     "defaultBranch": "Default branch",
-    "private": "Private repository"
+    "private": "Private repository",
+    "folder": "Folder"
+  },
+  "activity": {
+    "title": "Recent activity",
+    "empty": "No recent activity."
+  },
+  "tokens": {
+    "title": "Access tokens",
+    "lead": "Personal access tokens for HTTPS Git and API access.",
+    "empty": "No tokens yet.",
+    "add": "Generate token",
+    "nameField": "Name",
+    "namePlaceholder": "CI deploy",
+    "creating": "Creating...",
+    "submit": "Generate",
+    "revoke": "Revoke",
+    "prefix": "Prefix",
+    "lastUsed": "Last used",
+    "confirmRevoke": "Revoke this token?",
+    "createdTitle": "Token created",
+    "createdHint": "Copy this token now. You will not be able to see it again."
   },
   "errors": {
     "loginFailed": "Login failed",
@@ -160,28 +194,43 @@
     "createOrg": "Failed to create organization",
     "saveOrg": "Failed to save organization",
     "deleteOrg": "Failed to delete organization",
-    "orgMember": "Failed to update members"
+    "orgMember": "Failed to update members",
+    "loadTokens": "Failed to load tokens",
+    "createToken": "Failed to create token",
+    "loadActivity": "Failed to load activity",
+    "loadBlame": "Failed to load blame",
+    "transferFailed": "Transfer failed"
   },
   "orgs": {
     "title": "Organizations",
-    "lead": "Shared namespaces for teams. URLs are /{slug}/... without an /org/ prefix.",
+    "yours": "Your organizations",
     "new": "New organization",
     "empty": "No organizations yet.",
     "slug": "Slug",
+    "slugHint": "Used in URLs: /{slug}/repo",
     "name": "Name",
     "description": "Description",
     "creating": "Creating...",
     "create": "Create organization",
     "repos": "Repositories",
     "members": "Members",
+    "noMembers": "No members yet.",
     "settings": "Settings",
-    "noRepos": "No repositories in this organization.",
+    "tabs": "Organization sections",
+    "noRepos": "No folders or repositories in this organization yet.",
     "username": "Username",
+    "usernamePlaceholder": "username",
     "role": "Role",
+    "role_owner": "Owner",
+    "role_admin": "Admin",
+    "role_member": "Member",
     "addMember": "Add member",
-    "save": "Save",
-    "danger": "Delete this organization. It must have no repositories.",
-    "delete": "Delete organization"
+    "save": "Save changes",
+    "saved": "Saved",
+    "danger": "Permanently delete this organization. It must have no repositories.",
+    "delete": "Delete organization",
+    "confirmDelete": "Delete organization {slug}? This cannot be undone.",
+    "activity": "Activity"
   },
   "search": {
     "title": "Search",

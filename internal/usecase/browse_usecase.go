@@ -152,6 +152,24 @@ func (uc *RepositoryUseCase) GetBlob(in ResolveRepositoryInput, ref, path string
 	return blob, nil
 }
 
+func (uc *RepositoryUseCase) GetBlame(in ResolveRepositoryInput, ref, path string) (*domain.BlameResult, error) {
+	repo, err := uc.resolveReadable(in)
+	if err != nil {
+		return nil, err
+	}
+
+	if strings.TrimSpace(ref) == "" {
+		ref = repo.DefaultBranch
+	}
+
+	blame, err := uc.git.GetBlame(repo.Path, ref, path)
+	if err != nil {
+		return nil, mapGitBrowseErr(err)
+	}
+
+	return blame, nil
+}
+
 func (uc *RepositoryUseCase) GetReadme(in ResolveRepositoryInput, ref string) (*domain.BlobContent, error) {
 	repo, err := uc.resolveReadable(in)
 	if err != nil {

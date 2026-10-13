@@ -31,23 +31,6 @@ export interface OrgMember {
   role: string
 }
 
-export interface Organization {
-  id: number
-  slug: string
-  name: string
-  description: string
-  has_avatar: boolean
-  role?: string
-  created_at: string
-  updated_at: string
-}
-
-export interface OrgMember {
-  user_id: number
-  username: string
-  role: string
-}
-
 export interface Folder {
   id: number
   parent_id: number | null
@@ -179,6 +162,43 @@ export interface SSHKey {
   fingerprint: string
   created_at: string
   last_used_at?: string
+}
+
+export interface AccessToken {
+  id: number
+  name: string
+  prefix: string
+  created_at: string
+  last_used_at?: string
+}
+
+export interface CreateAccessTokenResponse extends AccessToken {
+  token: string
+}
+
+export interface ActivityEvent {
+  id: number
+  type: string
+  summary: string
+  ref?: string
+  actor: string
+  owner: string
+  owner_kind: string
+  created_at: string
+}
+
+export interface BlameLine {
+  line: number
+  content: string
+  commit_sha: string
+  author_name: string
+  authored_at: string
+}
+
+export interface BlameResult {
+  path: string
+  ref: string
+  lines: BlameLine[]
 }
 
 export interface PullRequest {

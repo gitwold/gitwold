@@ -70,16 +70,20 @@ type UpdateOrganizationInput struct {
 }
 
 type OrganizationUseCase struct {
-	orgs  domain.OrganizationStore
-	users domain.UserStore
-	repos domain.RepositoryStore
+	orgs     domain.OrganizationStore
+	users    domain.UserStore
+	repos    domain.RepositoryStore
+	folders  domain.FolderStore
+	activity domain.ActivityStore
 }
 
-func NewOrganizationUseCase(orgs domain.OrganizationStore, users domain.UserStore, repos domain.RepositoryStore) *OrganizationUseCase {
+func NewOrganizationUseCase(orgs domain.OrganizationStore, users domain.UserStore, repos domain.RepositoryStore, folders domain.FolderStore, activity domain.ActivityStore) *OrganizationUseCase {
 	return &OrganizationUseCase{
-		orgs:  orgs,
-		users: users,
-		repos: repos,
+		orgs:     orgs,
+		users:    users,
+		repos:    repos,
+		folders:  folders,
+		activity: activity,
 	}
 }
 
@@ -122,6 +126,15 @@ func (uc *OrganizationUseCase) Create(in CreateOrganizationInput) (*Organization
 		return nil, fmt.Errorf("add owner member: %w", err)
 	}
 
+	orgID := org.ID
+	recordActivity(uc.activity, &domain.ActivityEvent{
+		ActorID:   in.CreatorID,
+		OwnerKind: domain.OwnerKindOrg,
+		OwnerID:   org.ID,
+		OrgID:     &orgID,
+		Type:      domain.ActivityOrgCreate,
+		Summary:   activitySummary("created organization %s", org.Slug),
+	})
 	item := toOrgItem(org, domain.OrgRoleOwner)
 
 	return &item, nil
@@ -276,6 +289,15 @@ func (uc *OrganizationUseCase) AddMember(slug string, viewerID uint, username, r
 		return nil, err
 	}
 
+	orgID := org.ID
+	recordActivity(uc.activity, &domain.ActivityEvent{
+		ActorID:   viewerID,
+		OwnerKind: domain.OwnerKindOrg,
+		OwnerID:   org.ID,
+		OrgID:     &orgID,
+		Type:      domain.ActivityMemberAdd,
+		Summary:   activitySummary("added %s as %s", user.Username, role),
+	})
 	return &OrgMemberItem{
 		UserID:   user.ID,
 		Username: user.Username,
@@ -409,7 +431,13 @@ func (uc *OrganizationUseCase) ListRepos(slug string, viewerID uint) ([]Reposito
 		if repos[i].IsPrivate && !isMember {
 			continue
 		}
-		out = append(out, toRepositoryItem(&repos[i], org.Slug, ""))
+		folderPath := ""
+		if repos[i].FolderID != nil && uc.folders != nil {
+			if f, err := uc.folders.FindByOwnerAndID(domain.OwnerKindOrg, org.ID, *repos[i].FolderID); err == nil {
+				folderPath = f.Path
+			}
+		}
+		out = append(out, toRepositoryItem(&repos[i], org.Slug, folderPath))
 	}
 
 	return out, nil

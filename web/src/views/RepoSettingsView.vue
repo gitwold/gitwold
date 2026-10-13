@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { inject, ref, watch } from 'vue'
+import { computed, inject, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { foldersApi, reposApi } from '@/api'
-import type { FolderTreeNode, Repository } from '@/api/types'
+import { foldersApi, orgsApi, reposApi } from '@/api'
+import type { FolderTreeNode, Organization, Repository } from '@/api/types'
 import RepoShell from '@/components/repo/RepoShell.vue'
 import PageState from '@/components/ui/PageState.vue'
+import { useAuth } from '@/composables/useAuth'
 import { i18n, localizeError } from '@/i18n'
 
 const props = defineProps<{
@@ -13,6 +14,7 @@ const props = defineProps<{
 }>()
 
 const router = useRouter()
+const auth = useAuth()
 const reloadSidebar = inject<() => void>('reloadSidebar', () => {})
 
 const repo = ref<Repository | null>(null)
@@ -33,6 +35,12 @@ const message = ref('')
 const loading = ref(true)
 const saving = ref(false)
 const deleting = ref(false)
+const orgs = ref<Organization[]>([])
+const transferOrg = ref('')
+const transferring = ref(false)
+
+const isPersonalRepo = computed(() => !!auth.user.value && props.owner === auth.user.value.username)
+const folderOrganization = computed(() => isPersonalRepo.value ? undefined : props.owner)
 
 function parseFolderKey(key: string): number | null {
   return key === '' ? null : Number(key)
@@ -61,7 +69,13 @@ async function load() {
     isPrivate.value = repo.value.is_private
     defaultBranch.value = repo.value.default_branch
     folderKey.value = repo.value.folder_id == null ? '' : String(repo.value.folder_id)
-    const tree = await foldersApi.tree()
+    const tree = await foldersApi.tree(folderOrganization.value)
+    if (isPersonalRepo.value) {
+      const orgRes = await orgsApi.listMine()
+      orgs.value = orgRes.organizations ?? []
+    } else {
+      orgs.value = []
+    }
     folderOptions.value = [
       {
         id: '',
@@ -115,6 +129,35 @@ async function save() {
     formError.value = localizeError(err, 'errors.saveFailed')
   } finally {
     saving.value = false
+  }
+}
+
+async function transfer() {
+  if (!repo.value || !transferOrg.value) {
+    return
+  }
+  
+  transferring.value = true
+  formError.value = ''
+  message.value = ''
+  try {
+    const moved = await reposApi.transfer(props.owner, props.repoPath, {
+      organization: transferOrg.value,
+    })
+    reloadSidebar()
+    const newPath = moved.folder_path ? `${moved.folder_path}/${moved.name}` : moved.name
+    await router.replace({
+      name: 'repo-settings',
+      params: {
+        owner: moved.owner,
+        repoPath: newPath,
+      },
+    })
+    message.value = i18n.global.t('settings.transferred')
+  } catch (err) {
+    formError.value = localizeError(err, 'errors.transferFailed')
+  } finally {
+    transferring.value = false
   }
 }
 
@@ -181,6 +224,27 @@ watch(() => [props.owner, props.repoPath], load, { immediate: true })
         <p v-else-if="message" class="text-sm text-moss">{{ message }}</p>
         <button type="submit" class="btn-primary" :disabled="saving">
           {{ saving ? $t('settings.saving') : $t('settings.save') }}
+        </button>
+      </form>
+
+      <form
+        v-if="repo && isPersonalRepo && orgs.length"
+        class="mt-6 max-w-2xl space-y-3 rounded-md border border-line bg-white p-4"
+        @submit.prevent="transfer"
+      >
+        <h2 class="text-lg font-semibold">{{ $t('settings.transfer') }}</h2>
+        <p class="text-sm text-ink-muted">{{ $t('settings.transferLead') }}</p>
+        <label class="block text-sm">
+          <span class="mb-1 block font-semibold">{{ $t('settings.transferOrg') }}</span>
+          <select v-model="transferOrg" class="input" required>
+            <option value="" disabled>{{ $t('settings.transferPick') }}</option>
+            <option v-for="org in orgs" :key="org.id" :value="org.slug">
+              {{ org.name }} ({{ org.slug }})
+            </option>
+          </select>
+        </label>
+        <button type="submit" class="btn-primary" :disabled="transferring || !transferOrg">
+          {{ transferring ? $t('settings.transferring') : $t('settings.transferAction') }}
         </button>
       </form>
 

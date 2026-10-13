@@ -48,24 +48,29 @@ func newTestServer(t *testing.T) (*httptest.Server, string) {
 	sshKeyStore := sqlite.NewSSHKeyStore(db)
 	issueStore := sqlite.NewIssueStore(db)
 	pullStore := sqlite.NewPullRequestStore(db)
+	orgStore := sqlite.NewOrganizationStore(db)
+	activityStore := sqlite.NewActivityStore(db)
 	gitRepo := git.NewRepository()
 	hasher := bcrypt.NewHasher()
 	tokens := token.NewGenerator()
+	avatarsDir := filepath.Join(dir, "data", "avatars")
+	reposRoot := filepath.Join(dir, "data", "repos")
 
-	orgStore := sqlite.NewOrganizationStore(db)
 	authUC := usecase.NewAuthUseCase(userStore, sessionStore, orgStore, hasher, tokens)
-	folderUC := usecase.NewFolderUseCase(folderStore, repoStore)
-	repoUC := usecase.NewRepositoryUseCase(repoStore, folderStore, userStore, orgStore, gitRepo)
+	folderUC := usecase.NewFolderUseCase(folderStore, repoStore, orgStore)
+	repoUC := usecase.NewRepositoryUseCase(repoStore, folderStore, userStore, orgStore, gitRepo, activityStore)
 	tokenUC := usecase.NewTokenUseCase(tokenStore, tokens)
 	sshKeyUC := usecase.NewSSHKeyUseCase(sshKeyStore, userStore)
-	gitUC := usecase.NewGitUseCase(repoStore, folderStore, userStore, orgStore, tokenStore, hasher, gitRepo)
-	issueUC := usecase.NewIssueUseCase(issueStore, repoStore, folderStore, userStore, orgStore)
-	pullUC := usecase.NewPullRequestUseCase(pullStore, repoStore, folderStore, userStore, orgStore, gitRepo)
-	profileUC := usecase.NewProfileUseCase(userStore, filepath.Join(dir, "data", "avatars"))
+	gitUC := usecase.NewGitUseCase(repoStore, folderStore, userStore, orgStore, tokenStore, hasher, gitRepo, activityStore)
+	issueUC := usecase.NewIssueUseCase(issueStore, repoStore, folderStore, userStore, orgStore, activityStore)
+	pullUC := usecase.NewPullRequestUseCase(pullStore, repoStore, folderStore, userStore, orgStore, gitRepo, activityStore)
+	profileUC := usecase.NewProfileUseCase(userStore, avatarsDir)
+	orgUC := usecase.NewOrganizationUseCase(orgStore, userStore, repoStore, folderStore, activityStore)
+	activityUC := usecase.NewActivityUseCase(activityStore, userStore, orgStore, repoStore)
 
 	router := deliveryhttp.NewRouter(
 		handler.NewAuthHandler(authUC),
-		handler.NewRepositoryHandler(repoUC),
+		handler.NewRepositoryHandler(repoUC, reposRoot),
 		handler.NewFolderHandler(folderUC),
 		handler.NewTokenHandler(tokenUC),
 		handler.NewSSHKeyHandler(sshKeyUC),
@@ -73,7 +78,8 @@ func newTestServer(t *testing.T) (*httptest.Server, string) {
 		handler.NewIssueHandler(issueUC),
 		handler.NewPullRequestHandler(pullUC),
 		handler.NewProfileHandler(profileUC),
-		handler.NewOrganizationHandler(usecase.NewOrganizationUseCase(orgStore, userStore, repoStore)),
+		handler.NewOrganizationHandler(orgUC),
+		handler.NewActivityHandler(activityUC),
 		authUC,
 	)
 	srv := httptest.NewServer(router)
@@ -115,8 +121,8 @@ func doJSON(t *testing.T, srv *httptest.Server, method, path, body string, cooki
 	defer res.Body.Close()
 	raw, _ := io.ReadAll(res.Body)
 	return jsonResp{
-		StatusCode: res.StatusCode, 
-		Body: string(raw), 
-		Cookies: res.Cookies(),
+		StatusCode: res.StatusCode,
+		Body:       string(raw),
+		Cookies:    res.Cookies(),
 	}
 }

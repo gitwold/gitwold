@@ -60,7 +60,7 @@ func (h *GitHandler) infoRefs(w http.ResponseWriter, r *http.Request, owner, fol
 }
 
 func (h *GitHandler) servePack(w http.ResponseWriter, r *http.Request, owner, folderPath, name string, service usecase.GitService) {
-	repo, _, err := h.resolveAndAuth(w, r, owner, folderPath, name, service)
+	repo, viewer, err := h.resolveAndAuth(w, r, owner, folderPath, name, service)
 	if err != nil {
 		return
 	}
@@ -73,7 +73,11 @@ func (h *GitHandler) servePack(w http.ResponseWriter, r *http.Request, owner, fo
 	}
 
 	if service == usecase.GitReceivePack {
-		_ = h.git.TouchActivity(repo.ID)
+		var actorID uint
+		if viewer != nil {
+			actorID = viewer.ID
+		}
+		_ = h.git.TouchActivity(repo, actorID)
 	}
 }
 

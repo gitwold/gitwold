@@ -174,11 +174,15 @@ onUnmounted(clearBreadcrumbs)
           </button>
         </form>
 
-        <p class="text-sm">
-          <RouterLink 
-            :to="{ name: 'ssh-keys' }" 
+        <p class="flex flex-wrap gap-x-4 gap-y-1 text-sm">
+          <RouterLink
+            :to="{ name: 'ssh-keys' }"
             class="text-accent hover:underline"
           >{{ $t('nav.sshKeys') }}</RouterLink>
+          <RouterLink
+            :to="{ name: 'tokens' }"
+            class="text-accent hover:underline"
+          >{{ $t('nav.accessTokens') }}</RouterLink>
         </p>
       </div>
     </PageState>

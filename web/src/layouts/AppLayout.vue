@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, provide, ref } from 'vue'
 import { RouterView, useRoute } from 'vue-router'
+import AppFooter from '@/components/AppFooter.vue'
 import AppHeader from '@/components/AppHeader.vue'
 import FolderSidebar from '@/components/FolderSidebar.vue'
 
@@ -12,14 +13,17 @@ const showSidebar = computed(() => route.name === 'home' || route.name === 'fold
 </script>
 
 <template>
-  <div class="min-h-screen bg-paper">
+  <div class="flex min-h-screen flex-col bg-paper">
     <AppHeader />
-    <div v-if="showSidebar" class="mx-auto flex max-w-7xl gap-6 px-4 py-6">
+    <div v-if="showSidebar" class="mx-auto flex w-full max-w-7xl flex-1 gap-6 px-4 py-6">
       <FolderSidebar ref="sidebarRef" />
       <main class="min-w-0 flex-1">
         <RouterView />
       </main>
     </div>
-    <RouterView v-else />
+    <main v-else class="min-w-0 flex-1">
+      <RouterView />
+    </main>
+    <AppFooter />
   </div>
 </template>

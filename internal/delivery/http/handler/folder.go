@@ -19,9 +19,10 @@ func NewFolderHandler(folders *usecase.FolderUseCase) *FolderHandler {
 }
 
 type createFolderRequest struct {
-	Name     string `json:"name"`
-	ParentID *uint  `json:"parent_id"`
-	Path     string `json:"path"`
+	Name         string `json:"name"`
+	ParentID     *uint  `json:"parent_id"`
+	Path         string `json:"path"`
+	Organization string `json:"organization"`
 }
 
 type renameFolderRequest struct {
@@ -46,10 +47,12 @@ func (h *FolderHandler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	out, err := h.folders.Create(usecase.CreateFolderInput{
-		OwnerID:  user.ID,
-		Name:     req.Name,
-		ParentID: req.ParentID,
-		Path:     req.Path,
+		ViewerID:     user.ID,
+		OwnerID:      user.ID,
+		Organization: req.Organization,
+		Name:         req.Name,
+		ParentID:     req.ParentID,
+		Path:         req.Path,
 	})
 	if err != nil {
 		writeFolderError(w, r, err)
@@ -67,6 +70,7 @@ func (h *FolderHandler) List(w http.ResponseWriter, r *http.Request) {
 	}
 
 	tree := r.URL.Query().Get("tree") == "1" || r.URL.Query().Get("tree") == "true"
+	org := r.URL.Query().Get("organization")
 	var parentID *uint
 	if raw := r.URL.Query().Get("parent_id"); raw != "" {
 		id, err := strconv.ParseUint(raw, 10, 64)
@@ -74,12 +78,11 @@ func (h *FolderHandler) List(w http.ResponseWriter, r *http.Request) {
 			writeError(w, r, http.StatusBadRequest, "invalid_parent_id")
 			return
 		}
-
 		v := uint(id)
 		parentID = &v
 	}
 
-	out, err := h.folders.List(user.ID, parentID, tree)
+	out, err := h.folders.List(user.ID, user.ID, org, parentID, tree)
 	if err != nil {
 		writeFolderError(w, r, err)
 		return
@@ -89,7 +92,6 @@ func (h *FolderHandler) List(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]any{"tree": out})
 		return
 	}
-
 	writeJSON(w, http.StatusOK, map[string]any{"folders": out})
 }
 
@@ -106,7 +108,8 @@ func (h *FolderHandler) Get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	out, err := h.folders.GetContents(user.ID, id)
+	org := r.URL.Query().Get("organization")
+	out, err := h.folders.GetContents(user.ID, user.ID, org, id)
 	if err != nil {
 		writeFolderError(w, r, err)
 		return
@@ -120,29 +123,28 @@ func (h *FolderHandler) Rename(w http.ResponseWriter, r *http.Request) {
 		writeError(w, r, http.StatusUnauthorized, "unauthorized")
 		return
 	}
-
 	id, err := parseID(r.PathValue("id"))
 	if err != nil {
 		writeError(w, r, http.StatusBadRequest, "invalid_folder_id")
 		return
 	}
-
 	var req renameFolderRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeError(w, r, http.StatusBadRequest, "invalid_json")
 		return
 	}
-
+	org := r.URL.Query().Get("organization")
 	out, err := h.folders.Rename(usecase.RenameFolderInput{
-		OwnerID: user.ID,
-		ID:      id,
-		Name:    req.Name,
+		ViewerID:     user.ID,
+		OwnerID:      user.ID,
+		Organization: org,
+		ID:           id,
+		Name:         req.Name,
 	})
 	if err != nil {
 		writeFolderError(w, r, err)
 		return
 	}
-
 	writeJSON(w, http.StatusOK, out)
 }
 
@@ -152,14 +154,13 @@ func (h *FolderHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		writeError(w, r, http.StatusUnauthorized, "unauthorized")
 		return
 	}
-
 	id, err := parseID(r.PathValue("id"))
 	if err != nil {
 		writeError(w, r, http.StatusBadRequest, "invalid_folder_id")
 		return
 	}
-
-	if err := h.folders.Delete(user.ID, id); err != nil {
+	org := r.URL.Query().Get("organization")
+	if err := h.folders.Delete(user.ID, user.ID, org, id); err != nil {
 		writeFolderError(w, r, err)
 		return
 	}
@@ -172,38 +173,36 @@ func (h *FolderHandler) Move(w http.ResponseWriter, r *http.Request) {
 		writeError(w, r, http.StatusUnauthorized, "unauthorized")
 		return
 	}
-
 	id, err := parseID(r.PathValue("id"))
 	if err != nil {
 		writeError(w, r, http.StatusBadRequest, "invalid_folder_id")
 		return
 	}
-
 	var req moveFolderRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeError(w, r, http.StatusBadRequest, "invalid_json")
 		return
 	}
-
+	org := r.URL.Query().Get("organization")
 	out, err := h.folders.Move(usecase.MoveFolderInput{
-		OwnerID:     user.ID,
-		ID:          id,
-		NewParentID: req.ParentID,
+		ViewerID:     user.ID,
+		OwnerID:      user.ID,
+		Organization: org,
+		ID:           id,
+		NewParentID:  req.ParentID,
 	})
 	if err != nil {
 		writeFolderError(w, r, err)
 		return
 	}
-
 	writeJSON(w, http.StatusOK, out)
 }
 
 func parseID(raw string) (uint, error) {
 	id, err := strconv.ParseUint(raw, 10, 64)
-	if err != nil || id == 0 {
-		return 0, errors.New("invalid_folder_id")
+	if err != nil {
+		return 0, err
 	}
-
 	return uint(id), nil
 }
 
@@ -211,17 +210,20 @@ func writeFolderError(w http.ResponseWriter, r *http.Request, err error) {
 	switch {
 	case errors.Is(err, usecase.ErrFolderNameRequired),
 		errors.Is(err, usecase.ErrInvalidFolderName),
-		errors.Is(err, usecase.ErrInvalidFolderMove):
+		errors.Is(err, usecase.ErrFolderDepthExceeded),
+		errors.Is(err, usecase.ErrInvalidFolderMove),
+		errors.Is(err, usecase.ErrFolderCycle):
 		writeError(w, r, http.StatusBadRequest, err.Error())
 	case errors.Is(err, usecase.ErrFolderExists):
 		writeError(w, r, http.StatusConflict, err.Error())
 	case errors.Is(err, usecase.ErrFolderNotFound),
 		errors.Is(err, usecase.ErrParentFolderNotFound):
 		writeError(w, r, http.StatusNotFound, err.Error())
-	case errors.Is(err, usecase.ErrFolderNotEmpty),
-		errors.Is(err, usecase.ErrFolderDepthExceeded),
-		errors.Is(err, usecase.ErrFolderCycle):
+	case errors.Is(err, usecase.ErrFolderNotEmpty):
 		writeError(w, r, http.StatusConflict, err.Error())
+	case errors.Is(err, usecase.ErrOrgForbidden),
+		errors.Is(err, usecase.ErrOrgNotFound):
+		writeError(w, r, http.StatusForbidden, err.Error())
 	case errors.Is(err, usecase.ErrUnauthorized):
 		writeError(w, r, http.StatusUnauthorized, err.Error())
 	default:

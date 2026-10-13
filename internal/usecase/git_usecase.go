@@ -17,13 +17,14 @@ const (
 )
 
 type GitUseCase struct {
-	repos   domain.RepositoryStore
-	folders domain.FolderStore
-	users   domain.UserStore
-	orgs    domain.OrganizationStore
-	tokens  domain.AccessTokenStore
-	hasher  domain.PasswordHasher
-	git     domain.GitRepository
+	repos    domain.RepositoryStore
+	folders  domain.FolderStore
+	users    domain.UserStore
+	orgs     domain.OrganizationStore
+	tokens   domain.AccessTokenStore
+	hasher   domain.PasswordHasher
+	git      domain.GitRepository
+	activity domain.ActivityStore
 }
 
 func NewGitUseCase(
@@ -34,15 +35,17 @@ func NewGitUseCase(
 	tokens domain.AccessTokenStore,
 	hasher domain.PasswordHasher,
 	git domain.GitRepository,
+	activity domain.ActivityStore,
 ) *GitUseCase {
 	return &GitUseCase{
-		repos:   repos,
-		folders: folders,
-		users:   users,
-		orgs:    orgs,
-		tokens:  tokens,
-		hasher:  hasher,
-		git:     git,
+		repos:    repos,
+		folders:  folders,
+		users:    users,
+		orgs:     orgs,
+		tokens:   tokens,
+		hasher:   hasher,
+		git:      git,
+		activity: activity,
 	}
 }
 
@@ -137,7 +140,7 @@ func (uc *GitUseCase) Authorize(repo *domain.Repository, viewer *domain.User, se
 		if !repoUC.canWriteGit(repo, viewer.ID) {
 			return ErrRepoForbidden
 		}
-		
+
 		return nil
 	default:
 		return fmt.Errorf("unsupported git service: %s", service)
@@ -156,8 +159,34 @@ func (uc *GitUseCase) ServeSSHPack(repoPath string, service GitService, stdin io
 	return uc.git.ServeSSHPack(repoPath, string(service), stdin, stdout, stderr)
 }
 
-func (uc *GitUseCase) TouchActivity(repoID uint) error {
-	return uc.repos.TouchLastActivity(repoID, time.Now())
+func (uc *GitUseCase) TouchActivity(repo *domain.Repository, actorID uint) error {
+	if repo == nil {
+		return nil
+	}
+
+	_ = uc.repos.TouchLastActivity(repo.ID, time.Now())
+	kind := repo.OwnerKind
+	if kind == "" {
+		kind = domain.OwnerKindUser
+	}
+
+	var orgID *uint
+	if kind == domain.OwnerKindOrg {
+		id := repo.OwnerID
+		orgID = &id
+	}
+
+	recordActivity(uc.activity, &domain.ActivityEvent{
+		ActorID:   actorID,
+		OwnerKind: kind,
+		OwnerID:   repo.OwnerID,
+		RepoID:    &repo.ID,
+		OrgID:     orgID,
+		Type:      domain.ActivityPush,
+		Summary:   "pushed to repository",
+	})
+
+	return nil
 }
 
 func ParseGitService(raw string) (GitService, error) {

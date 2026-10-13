@@ -27,6 +27,10 @@ func NewDB(dsn string) (*gorm.DB, error) {
 		return nil, err
 	}
 
+	if err := ensureActivityTables(db); err != nil {
+		return nil, err
+	}
+
 	if err := migrateFolders(db); err != nil {
 		return nil, err
 	}
@@ -185,7 +189,7 @@ func (s *RepositoryStore) ListByOwnerAndFolderID(ownerKind string, ownerID uint,
 	if err != nil {
 		return nil, err
 	}
-	
+
 	return repoModelsToDomain(models), nil
 }
 
@@ -265,6 +269,6 @@ func repoModelsToDomain(models []repositoryModel) []domain.Repository {
 	for _, model := range models {
 		repos = append(repos, model.toDomain())
 	}
-	
+
 	return repos
 }

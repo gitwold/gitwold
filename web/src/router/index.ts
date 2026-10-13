@@ -36,6 +36,11 @@ const routes: RouteRecordRaw[] = [
         component: () => import('@/views/SSHKeysView.vue'),
       },
       {
+        path: 'settings/tokens',
+        name: 'tokens',
+        component: () => import('@/views/TokensView.vue'),
+      },
+      {
         path: 'settings/profile',
         name: 'profile',
         component: () => import('@/views/ProfileView.vue'),

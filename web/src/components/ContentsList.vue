@@ -9,6 +9,8 @@ const props = defineProps<{
   folders: Folder[]
   repos: (RepoSummary | Repository)[]
   folderPath?: string
+  repoOwner?: string
+  organization?: string
 }>()
 
 const auth = useAuth()
@@ -24,6 +26,27 @@ function repoPath(repo: RepoSummary | Repository) {
 
   return repo.name
 }
+
+function ownerForRepo(repo: RepoSummary | Repository) {
+  if ('owner' in repo && repo.owner) {
+    return repo.owner
+  }
+
+  return props.repoOwner || auth.user.value?.username || ''
+}
+
+function folderLink(id: number) {
+  const to: { name: 'folder'; params: { id: string }; query?: { organization: string } } = {
+    name: 'folder',
+    params: { id: String(id) },
+  }
+  
+  if (props.organization) {
+    to.query = { organization: props.organization }
+  }
+
+  return to
+}
 </script>
 
 <template>
@@ -33,12 +56,7 @@ function repoPath(repo: RepoSummary | Repository) {
       <ul class="divide-y divide-line">
         <li v-for="folder in folders" :key="folder.id">
           <RouterLink
-            :to="{
-              name: 'folder',
-              params: {
-                id: String(folder.id)
-              }
-            }"
+            :to="folderLink(folder.id)"
             class="flex items-center gap-2 px-4 py-2.5 hover:bg-paper"
           >
             <Icon name="folder" class="text-accent" />
@@ -57,7 +75,7 @@ function repoPath(repo: RepoSummary | Repository) {
             :to="{
               name: 'repo',
               params: {
-                owner: auth.user.value?.username ?? '',
+                owner: ownerForRepo(repo),
                 repoPath: repoPath(repo)
                 }
             }"

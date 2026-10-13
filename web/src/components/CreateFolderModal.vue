@@ -6,6 +6,7 @@ import { localizeError } from '@/i18n'
 
 const props = defineProps<{
   parentId?: number | null
+  organization?: string
 }>()
 
 const emit = defineEmits<{
@@ -24,6 +25,7 @@ async function submit() {
     await foldersApi.create({
       name: name.value.trim(),
       parent_id: props.parentId ?? null,
+      organization: props.organization || undefined,
     })
     emit('created')
     emit('close')

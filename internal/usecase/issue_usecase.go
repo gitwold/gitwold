@@ -54,11 +54,12 @@ type IssueDetail struct {
 }
 
 type IssueUseCase struct {
-	issues  domain.IssueStore
-	repos   domain.RepositoryStore
-	folders domain.FolderStore
-	users   domain.UserStore
-	orgs    domain.OrganizationStore
+	issues   domain.IssueStore
+	repos    domain.RepositoryStore
+	folders  domain.FolderStore
+	users    domain.UserStore
+	orgs     domain.OrganizationStore
+	activity domain.ActivityStore
 }
 
 func NewIssueUseCase(
@@ -67,13 +68,15 @@ func NewIssueUseCase(
 	folders domain.FolderStore,
 	users domain.UserStore,
 	orgs domain.OrganizationStore,
+	activity domain.ActivityStore,
 ) *IssueUseCase {
 	return &IssueUseCase{
-		issues:  issues,
-		repos:   repos,
-		folders: folders,
-		users:   users,
-		orgs:    orgs,
+		issues:   issues,
+		repos:    repos,
+		folders:  folders,
+		users:    users,
+		orgs:     orgs,
+		activity: activity,
 	}
 }
 
@@ -131,8 +134,8 @@ func (uc *IssueUseCase) Get(in ResolveRepositoryInput, number int) (*IssueDetail
 
 	return &IssueDetail{
 		IssueItem: *item,
-		Comments: mapped,
-		}, nil
+		Comments:  mapped,
+	}, nil
 }
 
 func (uc *IssueUseCase) Create(in ResolveRepositoryInput, title, body string, labelIDs []uint) (*IssueItem, error) {
@@ -172,6 +175,7 @@ func (uc *IssueUseCase) Create(in ResolveRepositoryInput, title, body string, la
 		}
 	}
 
+	recordRepoActivity(uc.activity, repo, in.ViewerID, domain.ActivityIssueOpen, activitySummary("opened issue #%d: %s", issue.Number, issue.Title))
 	return uc.mapIssue(issue)
 }
 
@@ -179,7 +183,7 @@ func (uc *IssueUseCase) Update(in ResolveRepositoryInput, number int, title *str
 	if in.ViewerID == 0 {
 		return nil, ErrUnauthorized
 	}
-	
+
 	repo, err := uc.readable(in)
 	if err != nil {
 		return nil, err
@@ -193,6 +197,8 @@ func (uc *IssueUseCase) Update(in ResolveRepositoryInput, number int, title *str
 	if issue.AuthorID != in.ViewerID && !uc.repoUC().canAdminRepo(repo, in.ViewerID) {
 		return nil, ErrIssueForbidden
 	}
+
+	prevState := issue.State
 
 	if title != nil {
 		next := strings.TrimSpace(*title)
@@ -231,6 +237,9 @@ func (uc *IssueUseCase) Update(in ResolveRepositoryInput, number int, title *str
 		}
 	}
 
+	if state != nil && *state != prevState && *state == "closed" {
+		recordRepoActivity(uc.activity, repo, in.ViewerID, domain.ActivityIssueClose, activitySummary("closed issue #%d", issue.Number))
+	}
 	return uc.mapIssue(issue)
 }
 
@@ -274,7 +283,7 @@ func (uc *IssueUseCase) AddComment(in ResolveRepositoryInput, number int, body s
 	if err != nil {
 		return nil, err
 	}
-	
+
 	body = strings.TrimSpace(body)
 	if body == "" {
 		return nil, ErrCommentBodyRequired
@@ -390,8 +399,8 @@ func (uc *IssueUseCase) CreateLabel(in ResolveRepositoryInput, name, color strin
 
 	label := &domain.Label{
 		RepositoryID: repo.ID,
-		Name: name,
-		Color: color,
+		Name:         name,
+		Color:        color,
 	}
 	if err := uc.issues.CreateLabel(label); err != nil {
 		return nil, fmt.Errorf("create label: %w", err)
@@ -652,8 +661,8 @@ func mapLabels(labels []domain.Label) []LabelItem {
 
 func toLabelItem(l domain.Label) LabelItem {
 	return LabelItem{
-		ID: l.ID,
-		Name: l.Name,
+		ID:    l.ID,
+		Name:  l.Name,
 		Color: l.Color,
 	}
 }
@@ -673,9 +682,9 @@ func isNotFound(err error) bool {
 
 func (uc *IssueUseCase) repoUC() *RepositoryUseCase {
 	return &RepositoryUseCase{
-		store: uc.repos, 
-		folders: uc.folders, 
-		users: uc.users, 
-		orgs: uc.orgs,
+		store:   uc.repos,
+		folders: uc.folders,
+		users:   uc.users,
+		orgs:    uc.orgs,
 	}
 }

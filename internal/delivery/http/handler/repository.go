@@ -11,11 +11,19 @@ import (
 )
 
 type RepositoryHandler struct {
-	repos *usecase.RepositoryUseCase
+	repos     *usecase.RepositoryUseCase
+	reposRoot string
 }
 
-func NewRepositoryHandler(repos *usecase.RepositoryUseCase) *RepositoryHandler {
-	return &RepositoryHandler{repos: repos}
+func NewRepositoryHandler(repos *usecase.RepositoryUseCase, reposRoot string) *RepositoryHandler {
+	if reposRoot == "" {
+		reposRoot = "data/repos"
+	}
+
+	return &RepositoryHandler{
+		repos:     repos,
+		reposRoot: reposRoot,
+	}
 }
 
 type createRepoRequest struct {
@@ -35,6 +43,10 @@ type updateRepoRequest struct {
 
 type moveRepoRequest struct {
 	FolderID *uint `json:"folder_id"`
+}
+
+type transferRepoRequest struct {
+	Organization string `json:"organization"`
 }
 
 func (h *RepositoryHandler) Create(w http.ResponseWriter, r *http.Request) {
@@ -59,7 +71,7 @@ func (h *RepositoryHandler) Create(w http.ResponseWriter, r *http.Request) {
 		FolderID:      req.FolderID,
 		Private:       req.Private,
 		DefaultBranch: req.DefaultBranch,
-		BasePath:      "data/repos",
+		BasePath:      h.reposRoot,
 	})
 	if err != nil {
 		writeRepoError(w, r, err)
@@ -85,7 +97,7 @@ func (h *RepositoryHandler) List(w http.ResponseWriter, r *http.Request) {
 			writeRepoError(w, r, err)
 			return
 		}
-		
+
 		writeJSON(w, http.StatusOK, map[string]any{"repos": items})
 		return
 	}
@@ -197,6 +209,16 @@ func (h *RepositoryHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+func (h *RepositoryHandler) DispatchPost(w http.ResponseWriter, r *http.Request) {
+	rest := strings.Trim(r.PathValue("path"), "/")
+	if strings.HasSuffix(rest, "/transfer") || rest == "transfer" {
+		h.Transfer(w, r)
+		return
+	}
+
+	h.Move(w, r)
+}
+
 func (h *RepositoryHandler) Move(w http.ResponseWriter, r *http.Request) {
 	user, ok := middleware.UserFromContext(r.Context())
 	if !ok {
@@ -204,7 +226,7 @@ func (h *RepositoryHandler) Move(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	owner, folderPath, name, err := parseRepoMovePath(r)
+	owner, folderPath, name, err := parseRepoActionPath(r, "move")
 	if err != nil {
 		writeError(w, r, http.StatusBadRequest, err.Error())
 		return
@@ -222,7 +244,42 @@ func (h *RepositoryHandler) Move(w http.ResponseWriter, r *http.Request) {
 		FolderPath:    folderPath,
 		Name:          name,
 		NewFolderID:   req.FolderID,
-		BasePath:      "data/repos",
+		BasePath:      h.reposRoot,
+	})
+	if err != nil {
+		writeRepoError(w, r, err)
+		return
+	}
+
+	writeJSON(w, http.StatusOK, out)
+}
+
+func (h *RepositoryHandler) Transfer(w http.ResponseWriter, r *http.Request) {
+	user, ok := middleware.UserFromContext(r.Context())
+	if !ok {
+		writeError(w, r, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+
+	owner, folderPath, name, err := parseRepoActionPath(r, "transfer")
+	if err != nil {
+		writeError(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	var req transferRepoRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, r, http.StatusBadRequest, "invalid_json")
+		return
+	}
+
+	out, err := h.repos.Transfer(usecase.TransferRepositoryInput{
+		ViewerID:      user.ID,
+		OwnerUsername: owner,
+		FolderPath:    folderPath,
+		Name:          name,
+		Organization:  req.Organization,
+		BasePath:      h.reposRoot,
 	})
 	if err != nil {
 		writeRepoError(w, r, err)
@@ -252,29 +309,26 @@ func parseRepoPath(r *http.Request) (owner, folderPath, name string, err error) 
 	return owner, folderPath, name, nil
 }
 
-func parseRepoMovePath(r *http.Request) (owner, folderPath, name string, err error) {
+func parseRepoActionPath(r *http.Request, action string) (owner, folderPath, name string, err error) {
 	owner = strings.TrimSpace(r.PathValue("owner"))
 	rest := strings.Trim(r.PathValue("path"), "/")
 	if owner == "" || rest == "" {
 		return "", "", "", errors.New("invalid_repository_path")
 	}
-
-	if !strings.HasSuffix(rest, "/move") && rest != "move" {
+	suffix := "/" + action
+	if !strings.HasSuffix(rest, suffix) && rest != action {
 		return "", "", "", errors.New("invalid_repo_move_path")
 	}
-
-	rest = strings.TrimSuffix(rest, "/move")
+	rest = strings.TrimSuffix(rest, suffix)
 	rest = strings.Trim(rest, "/")
 	if rest == "" {
 		return "", "", "", errors.New("invalid_repository_path")
 	}
-
 	parts := strings.Split(rest, "/")
 	name = parts[len(parts)-1]
 	if len(parts) > 1 {
 		folderPath = strings.Join(parts[:len(parts)-1], "/")
 	}
-
 	return owner, folderPath, name, nil
 }
 

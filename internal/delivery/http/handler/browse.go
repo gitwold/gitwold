@@ -115,6 +115,15 @@ func (h *RepositoryHandler) DispatchGet(w http.ResponseWriter, r *http.Request) 
 		}
 		writeJSON(w, http.StatusOK, item)
 
+	case "blame":
+		item, err := h.repos.GetBlame(in, ref, path)
+		if err != nil {
+			writeRepoError(w, r, err)
+			return
+		}
+
+		writeJSON(w, http.StatusOK, item)
+
 	case "raw":
 		item, err := h.repos.GetBlob(in, ref, path)
 		if err != nil {
@@ -183,7 +192,7 @@ func splitBrowsePath(parts []string) (action string, repoParts, extra []string, 
 
 	last := parts[len(parts)-1]
 	switch last {
-	case "branches", "tags", "commits", "tree", "blob", "raw", "readme", "stats":
+	case "branches", "tags", "commits", "tree", "blob", "raw", "blame", "readme", "stats":
 		return last, parts[:len(parts)-1], nil, true
 	default:
 		return "", nil, nil, false

@@ -3,10 +3,9 @@ package main
 import (
 	"log"
 	"net/http"
-	"os"
 	"os/exec"
-	"strings"
 
+	"github.com/magomedcoder/repo/internal/config"
 	deliveryhttp "github.com/magomedcoder/repo/internal/delivery/http"
 	"github.com/magomedcoder/repo/internal/delivery/http/handler"
 	deliveryssh "github.com/magomedcoder/repo/internal/delivery/ssh"
@@ -22,7 +21,12 @@ func main() {
 		log.Fatalf("git binary required for Smart HTTP: %v", err)
 	}
 
-	db, err := sqlite.NewDB("data/db.sqlite")
+	cfg, err := config.Load("")
+	if err != nil {
+		log.Fatalf("config: %v", err)
+	}
+
+	db, err := sqlite.NewDB(cfg.DBPath)
 	if err != nil {
 		log.Fatalf("database: %v", err)
 	}
@@ -36,24 +40,26 @@ func main() {
 	issueStore := sqlite.NewIssueStore(db)
 	pullStore := sqlite.NewPullRequestStore(db)
 	orgStore := sqlite.NewOrganizationStore(db)
+	activityStore := sqlite.NewActivityStore(db)
 	gitRepo := git.NewRepository()
 	hasher := bcrypt.NewHasher()
 	tokens := token.NewGenerator()
 
 	authUC := usecase.NewAuthUseCase(userStore, sessionStore, orgStore, hasher, tokens)
-	folderUC := usecase.NewFolderUseCase(folderStore, repoStore)
-	repoUC := usecase.NewRepositoryUseCase(repoStore, folderStore, userStore, orgStore, gitRepo)
+	folderUC := usecase.NewFolderUseCase(folderStore, repoStore, orgStore)
+	repoUC := usecase.NewRepositoryUseCase(repoStore, folderStore, userStore, orgStore, gitRepo, activityStore)
 	tokenUC := usecase.NewTokenUseCase(tokenStore, tokens)
 	sshKeyUC := usecase.NewSSHKeyUseCase(sshKeyStore, userStore)
-	gitUC := usecase.NewGitUseCase(repoStore, folderStore, userStore, orgStore, tokenStore, hasher, gitRepo)
-	issueUC := usecase.NewIssueUseCase(issueStore, repoStore, folderStore, userStore, orgStore)
-	pullUC := usecase.NewPullRequestUseCase(pullStore, repoStore, folderStore, userStore, orgStore, gitRepo)
-	profileUC := usecase.NewProfileUseCase(userStore, "data/avatars")
-	orgUC := usecase.NewOrganizationUseCase(orgStore, userStore, repoStore)
+	gitUC := usecase.NewGitUseCase(repoStore, folderStore, userStore, orgStore, tokenStore, hasher, gitRepo, activityStore)
+	issueUC := usecase.NewIssueUseCase(issueStore, repoStore, folderStore, userStore, orgStore, activityStore)
+	pullUC := usecase.NewPullRequestUseCase(pullStore, repoStore, folderStore, userStore, orgStore, gitRepo, activityStore)
+	profileUC := usecase.NewProfileUseCase(userStore, cfg.AvatarsDir)
+	orgUC := usecase.NewOrganizationUseCase(orgStore, userStore, repoStore, folderStore, activityStore)
+	activityUC := usecase.NewActivityUseCase(activityStore, userStore, orgStore, repoStore)
 
 	authHandler := handler.NewAuthHandler(authUC)
 	folderHandler := handler.NewFolderHandler(folderUC)
-	repoHandler := handler.NewRepositoryHandler(repoUC)
+	repoHandler := handler.NewRepositoryHandler(repoUC, cfg.ReposRoot)
 	tokenHandler := handler.NewTokenHandler(tokenUC)
 	sshKeyHandler := handler.NewSSHKeyHandler(sshKeyUC)
 	gitHandler := handler.NewGitHandler(gitUC)
@@ -61,26 +67,19 @@ func main() {
 	pullHandler := handler.NewPullRequestHandler(pullUC)
 	profileHandler := handler.NewProfileHandler(profileUC)
 	orgHandler := handler.NewOrganizationHandler(orgUC)
+	activityHandler := handler.NewActivityHandler(activityUC)
 
-	router := deliveryhttp.NewRouter(authHandler, repoHandler, folderHandler, tokenHandler, sshKeyHandler, gitHandler, issueHandler, pullHandler, profileHandler, orgHandler, authUC)
+	router := deliveryhttp.NewRouter(authHandler, repoHandler, folderHandler, tokenHandler, sshKeyHandler, gitHandler, issueHandler, pullHandler, profileHandler, orgHandler, activityHandler, authUC)
 
-	sshAddr := envOr("REPO_SSH_ADDR", ":2222")
-	sshServer := deliveryssh.NewServer(sshKeyUC, gitUC, "data/ssh", sshAddr)
+	sshServer := deliveryssh.NewServer(sshKeyUC, gitUC, cfg.SSHDir, cfg.SSHAddr)
 	go func() {
 		if err := sshServer.ListenAndServe(); err != nil {
 			log.Fatalf("ssh: %v", err)
 		}
 	}()
 
-	log.Println("listening on :8080")
-	if err := http.ListenAndServe(":8080", router); err != nil {
+	log.Printf("listening on %s (ssh %s)", cfg.HTTPAddr, cfg.SSHAddr)
+	if err := http.ListenAndServe(cfg.HTTPAddr, router); err != nil {
 		log.Fatalf("server: %v", err)
 	}
-}
-
-func envOr(key, fallback string) string {
-	if value := strings.TrimSpace(os.Getenv(key)); value != "" {
-		return value
-	}
-	return fallback
 }

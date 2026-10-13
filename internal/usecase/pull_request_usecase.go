@@ -54,12 +54,13 @@ type PullCompare struct {
 }
 
 type PullRequestUseCase struct {
-	pulls   domain.PullRequestStore
-	repos   domain.RepositoryStore
-	folders domain.FolderStore
-	users   domain.UserStore
-	orgs    domain.OrganizationStore
-	git     domain.GitRepository
+	pulls    domain.PullRequestStore
+	repos    domain.RepositoryStore
+	folders  domain.FolderStore
+	users    domain.UserStore
+	orgs     domain.OrganizationStore
+	git      domain.GitRepository
+	activity domain.ActivityStore
 }
 
 func NewPullRequestUseCase(
@@ -69,14 +70,16 @@ func NewPullRequestUseCase(
 	users domain.UserStore,
 	orgs domain.OrganizationStore,
 	git domain.GitRepository,
+	activity domain.ActivityStore,
 ) *PullRequestUseCase {
 	return &PullRequestUseCase{
-		pulls:   pulls,
-		repos:   repos,
-		folders: folders,
-		users:   users,
-		orgs:    orgs,
-		git:     git,
+		pulls:    pulls,
+		repos:    repos,
+		folders:  folders,
+		users:    users,
+		orgs:     orgs,
+		git:      git,
+		activity: activity,
 	}
 }
 
@@ -198,6 +201,7 @@ func (uc *PullRequestUseCase) Create(in ResolveRepositoryInput, title, body, bas
 		return nil, fmt.Errorf("create pull: %w", err)
 	}
 
+	recordRepoActivity(uc.activity, repo, in.ViewerID, domain.ActivityPROpen, activitySummary("opened pull request #%d: %s", pr.Number, pr.Title))
 	return uc.mapPull(pr)
 }
 
@@ -219,6 +223,8 @@ func (uc *PullRequestUseCase) Update(in ResolveRepositoryInput, number int, titl
 	if pr.AuthorID != in.ViewerID && !uc.repoUC().canAdminRepo(repo, in.ViewerID) {
 		return nil, ErrPullForbidden
 	}
+
+	prevState := pr.State
 
 	if title != nil {
 		next := strings.TrimSpace(*title)
@@ -293,6 +299,9 @@ func (uc *PullRequestUseCase) Update(in ResolveRepositoryInput, number int, titl
 		return nil, fmt.Errorf("update pull: %w", err)
 	}
 
+	if state != nil && *state != prevState && *state == "closed" {
+		recordRepoActivity(uc.activity, repo, in.ViewerID, domain.ActivityPRClose, activitySummary("closed pull request #%d", pr.Number))
+	}
 	return uc.mapPull(pr)
 }
 
@@ -405,6 +414,8 @@ func (uc *PullRequestUseCase) Merge(in ResolveRepositoryInput, number int, strat
 	}
 
 	_ = uc.repos.TouchLastActivity(repo.ID, now)
+	recordRepoActivity(uc.activity, repo, in.ViewerID, domain.ActivityPRMerge, activitySummary("merged pull request #%d", pr.Number))
+
 	return uc.mapPull(pr)
 }
 
@@ -642,9 +653,9 @@ func mapGitMergeErr(err error) error {
 
 func (uc *PullRequestUseCase) repoUC() *RepositoryUseCase {
 	return &RepositoryUseCase{
-		store: uc.repos, 
-		folders: uc.folders, 
-		users: uc.users, 
-		orgs: uc.orgs,
+		store:   uc.repos,
+		folders: uc.folders,
+		users:   uc.users,
+		orgs:    uc.orgs,
 	}
 }
