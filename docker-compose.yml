@@ -1,0 +1,16 @@
+services:
+  gitwold:
+    build: .
+    ports:
+      - "8080:8080"
+      - "2222:2222"
+    environment:
+      GITWOLD_SSH_ADDR: ":2222"
+    volumes:
+      - gitwold-data:/app/data
+      - gitwold-backups:/app/backups
+    restart: unless-stopped
+
+volumes:
+  gitwold-data:
+  gitwold-backups:
