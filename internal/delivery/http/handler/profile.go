@@ -7,8 +7,8 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/magomedcoder/repo/internal/delivery/http/middleware"
-	"github.com/magomedcoder/repo/internal/usecase"
+	"github.com/gitwold/gitwold/internal/delivery/http/middleware"
+	"github.com/gitwold/gitwold/internal/usecase"
 )
 
 type ProfileHandler struct {
@@ -118,7 +118,7 @@ func (h *ProfileHandler) ServeAvatar(w http.ResponseWriter, r *http.Request) {
 		writeProfileError(w, r, err)
 		return
 	}
-	
+
 	defer f.Close()
 	w.Header().Set("Content-Type", contentType)
 	w.Header().Set("Cache-Control", "public, max-age=3600")

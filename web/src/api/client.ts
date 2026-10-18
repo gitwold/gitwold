@@ -13,7 +13,7 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
     headers.set('Content-Type', 'application/json')
   }
   if (!headers.has('Accept-Language')) {
-    const locale = localStorage.getItem('repo.locale') || (navigator.language.toLowerCase().startsWith('ru') ? 'ru' : 'en')
+    const locale = localStorage.getItem('gitwold.locale') || (navigator.language.toLowerCase().startsWith('ru') ? 'ru' : 'en')
     headers.set('Accept-Language', locale)
   }
 

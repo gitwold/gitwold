@@ -8,8 +8,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/gitwold/gitwold/internal/domain"
 	gogit "github.com/go-git/go-git/v6"
-	"github.com/magomedcoder/repo/internal/domain"
 )
 
 type Repository struct {

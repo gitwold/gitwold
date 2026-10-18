@@ -33,7 +33,7 @@ func Default() Config {
 func Load(path string) (Config, error) {
 	cfg := Default()
 	if path == "" {
-		path = envOr("REPO_CONFIG", "config.yaml")
+		path = envOr("GITWOLD_CONFIG", "config.yaml")
 	}
 
 	if _, err := os.Stat(path); err == nil {
@@ -49,13 +49,13 @@ func Load(path string) (Config, error) {
 		return cfg, err
 	}
 
-	cfg.HTTPAddr = envOr("REPO_HTTP_ADDR", cfg.HTTPAddr)
-	cfg.SSHAddr = envOr("REPO_SSH_ADDR", cfg.SSHAddr)
-	cfg.DataDir = envOr("REPO_DATA_DIR", cfg.DataDir)
-	cfg.DBPath = envOr("REPO_DB_PATH", cfg.DBPath)
-	cfg.ReposRoot = envOr("REPO_REPOS_ROOT", cfg.ReposRoot)
-	cfg.AvatarsDir = envOr("REPO_AVATARS_DIR", cfg.AvatarsDir)
-	cfg.SSHDir = envOr("REPO_SSH_DIR", cfg.SSHDir)
+	cfg.HTTPAddr = envOr("GITWOLD_HTTP_ADDR", cfg.HTTPAddr)
+	cfg.SSHAddr = envOr("GITWOLD_SSH_ADDR", cfg.SSHAddr)
+	cfg.DataDir = envOr("GITWOLD_DATA_DIR", cfg.DataDir)
+	cfg.DBPath = envOr("GITWOLD_DB_PATH", cfg.DBPath)
+	cfg.ReposRoot = envOr("GITWOLD_REPOS_ROOT", cfg.ReposRoot)
+	cfg.AvatarsDir = envOr("GITWOLD_AVATARS_DIR", cfg.AvatarsDir)
+	cfg.SSHDir = envOr("GITWOLD_SSH_DIR", cfg.SSHDir)
 
 	if cfg.HTTPAddr == "" {
 		cfg.HTTPAddr = ":8080"

@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/magomedcoder/repo/internal/domain"
+	"github.com/gitwold/gitwold/internal/domain"
 )
 
 var (
@@ -60,7 +60,7 @@ func (uc *TokenUseCase) Create(in CreateTokenInput) (*CreateTokenOutput, error) 
 	if err != nil {
 		return nil, fmt.Errorf("generate token: %w", err)
 	}
-	raw = "repo_" + raw
+	raw = "gitwold_" + raw
 
 	token := &domain.AccessToken{
 		UserID:    in.UserID,

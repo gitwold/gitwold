@@ -6,7 +6,7 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/magomedcoder/repo/internal/domain"
+	"github.com/gitwold/gitwold/internal/domain"
 )
 
 var (

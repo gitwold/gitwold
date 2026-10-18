@@ -3,9 +3,9 @@ package http
 import (
 	"net/http"
 
-	"github.com/magomedcoder/repo/internal/delivery/http/handler"
-	"github.com/magomedcoder/repo/internal/delivery/http/middleware"
-	"github.com/magomedcoder/repo/pkg/i18n"
+	"github.com/gitwold/gitwold/internal/delivery/http/handler"
+	"github.com/gitwold/gitwold/internal/delivery/http/middleware"
+	"github.com/gitwold/gitwold/pkg/i18n"
 )
 
 func NewRouter(

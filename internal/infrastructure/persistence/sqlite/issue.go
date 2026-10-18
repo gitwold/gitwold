@@ -3,7 +3,7 @@ package sqlite
 import (
 	"time"
 
-	"github.com/magomedcoder/repo/internal/domain"
+	"github.com/gitwold/gitwold/internal/domain"
 	"gorm.io/gorm"
 )
 
@@ -201,7 +201,7 @@ func (s *IssueStore) ListComments(issueID uint) ([]domain.IssueComment, error) {
 	for _, m := range models {
 		out = append(out, m.toDomain())
 	}
-	
+
 	return out, nil
 }
 
@@ -417,6 +417,6 @@ func labelsToDomain(models []labelModel) []domain.Label {
 	for _, m := range models {
 		out = append(out, m.toDomain())
 	}
-	
+
 	return out
 }

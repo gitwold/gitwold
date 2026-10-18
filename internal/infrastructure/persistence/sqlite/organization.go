@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/magomedcoder/repo/internal/domain"
+	"github.com/gitwold/gitwold/internal/domain"
 	"gorm.io/gorm"
 )
 
@@ -20,8 +20,8 @@ type organizationModel struct {
 	CreatedBy   uint   `gorm:"not null;index"`
 }
 
-func (organizationModel) TableName() string { 
-	return "organizations" 
+func (organizationModel) TableName() string {
+	return "organizations"
 }
 
 func (m organizationModel) toDomain() *domain.Organization {
@@ -46,8 +46,8 @@ type organizationMemberModel struct {
 	Role           string `gorm:"size:16;not null"`
 }
 
-func (organizationMemberModel) TableName() string { 
-	return "organization_members" 
+func (organizationMemberModel) TableName() string {
+	return "organization_members"
 }
 
 func (m organizationMemberModel) toDomain() *domain.OrganizationMember {
@@ -89,9 +89,9 @@ func (s *OrganizationStore) Create(org *domain.Organization) error {
 
 func (s *OrganizationStore) Update(org *domain.Organization) error {
 	return s.db.Model(&organizationModel{}).Where("id = ?", org.ID).Updates(map[string]any{
-		"name":         org.Name,
-		"description":  org.Description,
-		"avatar_path":  org.AvatarPath,
+		"name":        org.Name,
+		"description": org.Description,
+		"avatar_path": org.AvatarPath,
 	}).Error
 }
 
@@ -204,6 +204,6 @@ func ensureOrgTables(db *gorm.DB) error {
 	if err := db.AutoMigrate(&organizationModel{}, &organizationMemberModel{}); err != nil {
 		return fmt.Errorf("migrate organizations: %w", err)
 	}
-	
+
 	return nil
 }

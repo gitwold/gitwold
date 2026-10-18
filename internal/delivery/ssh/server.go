@@ -13,8 +13,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/magomedcoder/repo/internal/domain"
-	"github.com/magomedcoder/repo/internal/usecase"
+	"github.com/gitwold/gitwold/internal/domain"
+	"github.com/gitwold/gitwold/internal/usecase"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -152,19 +152,19 @@ func (s *Server) handleSession(conn *ssh.ServerConn, channel ssh.Channel, reques
 func (s *Server) runGitCommand(conn *ssh.ServerConn, channel ssh.Channel, command string) int {
 	service, repoPath, err := parseGitSSHCommand(command)
 	if err != nil {
-		_, _ = io.WriteString(channel.Stderr(), "repo: only git-upload-pack and git-receive-pack are allowed\n")
+		_, _ = io.WriteString(channel.Stderr(), "gitwold: only git-upload-pack and git-receive-pack are allowed\n")
 		return 128
 	}
 
 	owner, folderPath, name, err := splitRepoPath(repoPath)
 	if err != nil {
-		_, _ = io.WriteString(channel.Stderr(), "repo: invalid repository path\n")
+		_, _ = io.WriteString(channel.Stderr(), "gitwold: invalid repository path\n")
 		return 128
 	}
 
 	repo, err := s.git.Resolve(owner, folderPath, name)
 	if err != nil {
-		_, _ = io.WriteString(channel.Stderr(), "repo: repository not found\n")
+		_, _ = io.WriteString(channel.Stderr(), "gitwold: repository not found\n")
 		return 128
 	}
 
@@ -173,21 +173,21 @@ func (s *Server) runGitCommand(conn *ssh.ServerConn, channel ssh.Channel, comman
 		Username: conn.Permissions.Extensions["username"],
 	}
 	if viewer.ID == 0 {
-		_, _ = io.WriteString(channel.Stderr(), "repo: unauthorized\n")
+		_, _ = io.WriteString(channel.Stderr(), "gitwold: unauthorized\n")
 		return 128
 	}
 
 	if err := s.git.Authorize(repo, viewer, service); err != nil {
 		if errors.Is(err, usecase.ErrUnauthorized) {
-			_, _ = io.WriteString(channel.Stderr(), "repo: unauthorized\n")
+			_, _ = io.WriteString(channel.Stderr(), "gitwold: unauthorized\n")
 			return 128
 		}
-		_, _ = io.WriteString(channel.Stderr(), "repo: permission denied\n")
+		_, _ = io.WriteString(channel.Stderr(), "gitwold: permission denied\n")
 		return 128
 	}
 
 	if err := s.git.ServeSSHPack(repo.Path, service, channel, channel, channel.Stderr()); err != nil {
-		_, _ = io.WriteString(channel.Stderr(), "repo: git error\n")
+		_, _ = io.WriteString(channel.Stderr(), "gitwold: git error\n")
 		return 128
 	}
 

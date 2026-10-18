@@ -7,8 +7,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/magomedcoder/repo/internal/delivery/http/middleware"
-	"github.com/magomedcoder/repo/internal/usecase"
+	"github.com/gitwold/gitwold/internal/delivery/http/middleware"
+	"github.com/gitwold/gitwold/internal/usecase"
 )
 
 type IssueHandler struct {
@@ -340,7 +340,7 @@ func parsePositive(raw string) (int, bool) {
 	if err != nil || n <= 0 {
 		return 0, false
 	}
-	
+
 	return n, true
 }
 

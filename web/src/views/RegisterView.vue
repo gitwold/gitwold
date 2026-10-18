@@ -37,7 +37,7 @@ async function submit() {
       <div class="w-full max-w-sm">
         <div class="mb-6 flex flex-col items-center gap-2 text-header">
           <span class="scale-150"><Icon name="mark" /></span>
-          <p class="text-2xl font-semibold text-ink">Repo</p>
+          <p class="text-2xl font-semibold text-ink">Gitwold</p>
         </div>
         <form class="rounded-md border border-line bg-white p-4" @submit.prevent="submit">
           <h1 class="mb-4 text-center text-xl font-semibold">{{ $t('auth.register') }}</h1>

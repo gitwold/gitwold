@@ -8,9 +8,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gitwold/gitwold/internal/domain"
 	"github.com/go-git/go-git/v6/plumbing"
 	"github.com/go-git/go-git/v6/plumbing/object"
-	"github.com/magomedcoder/repo/internal/domain"
 )
 
 func (r *Repository) Compare(repoPath, base, head string) (*domain.CompareResult, error) {
@@ -144,11 +144,11 @@ func (r *Repository) Merge(repoPath, base, head, strategy, authorName, authorEma
 	}
 
 	if authorName == "" {
-		authorName = "Repo"
+		authorName = "Gitwold"
 	}
 
 	if authorEmail == "" {
-		authorEmail = "repo@localhost"
+		authorEmail = "gitwold@localhost"
 	}
 
 	if message == "" {
@@ -172,7 +172,7 @@ func (r *Repository) Merge(repoPath, base, head, strategy, authorName, authorEma
 		return r.fastForward(repoPath, base, head)
 	}
 
-	tmp, err := os.MkdirTemp("", "repo-merge-*")
+	tmp, err := os.MkdirTemp("", "gitwold-merge-*")
 	if err != nil {
 		return "", err
 	}

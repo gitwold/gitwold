@@ -61,7 +61,7 @@
     "noRepos": "No repositories here yet."
   },
   "repo": {
-    "home": "Repo home",
+    "home": "Repository",
     "clone": "Clone",
     "cloneHttps": "HTTPS",
     "cloneSsh": "SSH",

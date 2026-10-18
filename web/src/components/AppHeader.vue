@@ -80,7 +80,7 @@ onUnmounted(() => {
     <div class="mx-auto flex h-14 max-w-7xl items-center gap-4 px-4">
       <RouterLink to="/" class="flex cursor-pointer items-center gap-2 font-semibold text-white">
         <Icon name="mark" />
-        Repo
+        Gitwold
       </RouterLink>
 
       <nav

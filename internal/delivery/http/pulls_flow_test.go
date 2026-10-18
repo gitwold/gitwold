@@ -10,13 +10,13 @@ import (
 	"strings"
 	"testing"
 
-	deliveryhttp "github.com/magomedcoder/repo/internal/delivery/http"
-	"github.com/magomedcoder/repo/internal/delivery/http/handler"
-	"github.com/magomedcoder/repo/internal/infrastructure/git"
-	"github.com/magomedcoder/repo/internal/infrastructure/persistence/sqlite"
-	"github.com/magomedcoder/repo/internal/usecase"
-	"github.com/magomedcoder/repo/pkg/bcrypt"
-	"github.com/magomedcoder/repo/pkg/token"
+	deliveryhttp "github.com/gitwold/gitwold/internal/delivery/http"
+	"github.com/gitwold/gitwold/internal/delivery/http/handler"
+	"github.com/gitwold/gitwold/internal/infrastructure/git"
+	"github.com/gitwold/gitwold/internal/infrastructure/persistence/sqlite"
+	"github.com/gitwold/gitwold/internal/usecase"
+	"github.com/gitwold/gitwold/pkg/bcrypt"
+	"github.com/gitwold/gitwold/pkg/token"
 )
 
 func TestPullRequestFlow(t *testing.T) {

@@ -3,7 +3,7 @@ package ssh
 import (
 	"testing"
 
-	"github.com/magomedcoder/repo/internal/usecase"
+	"github.com/gitwold/gitwold/internal/usecase"
 )
 
 func TestParseGitSSHCommand(t *testing.T) {

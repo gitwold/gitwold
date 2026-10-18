@@ -3,7 +3,7 @@ package sqlite
 import (
 	"time"
 
-	"github.com/magomedcoder/repo/internal/domain"
+	"github.com/gitwold/gitwold/internal/domain"
 	"gorm.io/gorm"
 )
 
@@ -51,7 +51,7 @@ func (m repositoryModel) toDomain() domain.Repository {
 		fid := m.FolderID
 		repo.FolderID = &fid
 	}
-	
+
 	if repo.DefaultBranch == "" {
 		repo.DefaultBranch = "main"
 	}
@@ -81,7 +81,7 @@ func fromDomain(repo *domain.Repository) *repositoryModel {
 	if repo.FolderID != nil {
 		m.FolderID = *repo.FolderID
 	}
-	
+
 	if m.DefaultBranch == "" {
 		m.DefaultBranch = "main"
 	}

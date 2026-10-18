@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/magomedcoder/repo/internal/domain"
-	"github.com/magomedcoder/repo/internal/usecase"
+	"github.com/gitwold/gitwold/internal/domain"
+	"github.com/gitwold/gitwold/internal/usecase"
 )
 
 type GitHandler struct {

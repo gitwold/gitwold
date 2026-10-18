@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/magomedcoder/repo/internal/domain"
+	"github.com/gitwold/gitwold/internal/domain"
 )
 
 var (
@@ -117,7 +117,7 @@ func (uc *AuthUseCase) Register(in RegisterInput) (*AuthOutput, error) {
 		if err != nil {
 			return nil, fmt.Errorf("check org slug: %w", err)
 		}
-		
+
 		if taken {
 			return nil, ErrUsernameTaken
 		}

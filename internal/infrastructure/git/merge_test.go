@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/magomedcoder/repo/internal/domain"
+	"github.com/gitwold/gitwold/internal/domain"
 )
 
 func TestCompareAndMerge(t *testing.T) {

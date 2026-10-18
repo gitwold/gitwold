@@ -14,11 +14,11 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/gitwold/gitwold/internal/domain"
 	gogit "github.com/go-git/go-git/v6"
 	"github.com/go-git/go-git/v6/plumbing"
 	"github.com/go-git/go-git/v6/plumbing/filemode"
 	"github.com/go-git/go-git/v6/plumbing/object"
-	"github.com/magomedcoder/repo/internal/domain"
 )
 
 func (r *Repository) open(repoPath string) (*gogit.Repository, error) {

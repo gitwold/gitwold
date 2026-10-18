@@ -6,7 +6,7 @@ import ru from '../../../langs/ru/web.json'
 export type MessageSchema = typeof en
 export type AppLocale = 'en' | 'ru'
 
-const STORAGE_KEY = 'repo.locale'
+const STORAGE_KEY = 'gitwold.locale'
 
 export function detectLocale(): AppLocale {
   const saved = localStorage.getItem(STORAGE_KEY)

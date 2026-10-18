@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/magomedcoder/repo/internal/domain"
+	"github.com/gitwold/gitwold/internal/domain"
 )
 
 type GitService string
@@ -67,11 +67,11 @@ func (uc *GitUseCase) Authenticate(username, secret string) (*domain.User, error
 	username = strings.ToLower(strings.TrimSpace(username))
 	secret = strings.TrimSpace(secret)
 
-	if strings.HasPrefix(username, "repo_") {
+	if strings.HasPrefix(username, "gitwold_") {
 		return uc.authenticateToken(username)
 	}
 
-	if strings.HasPrefix(secret, "repo_") {
+	if strings.HasPrefix(secret, "gitwold_") {
 		user, err := uc.authenticateToken(secret)
 		if err != nil {
 			return nil, ErrUnauthorized

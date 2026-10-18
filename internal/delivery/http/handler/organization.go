@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/magomedcoder/repo/internal/delivery/http/middleware"
-	"github.com/magomedcoder/repo/internal/usecase"
+	"github.com/gitwold/gitwold/internal/delivery/http/middleware"
+	"github.com/gitwold/gitwold/internal/usecase"
 )
 
 type OrganizationHandler struct {
@@ -225,7 +225,7 @@ func (h *OrganizationHandler) RemoveMember(w http.ResponseWriter, r *http.Reques
 		writeError(w, r, http.StatusUnauthorized, "unauthorized")
 		return
 	}
-	
+
 	uid, err := strconv.ParseUint(r.PathValue("userID"), 10, 64)
 	if err != nil {
 		writeError(w, r, http.StatusBadRequest, "invalid_user_id")
@@ -246,7 +246,7 @@ func (h *OrganizationHandler) Leave(w http.ResponseWriter, r *http.Request) {
 		writeError(w, r, http.StatusUnauthorized, "unauthorized")
 		return
 	}
-	
+
 	if err := h.orgs.Leave(r.PathValue("slug"), user.ID); err != nil {
 		writeOrgError(w, r, err)
 		return

@@ -1,4 +1,4 @@
-module github.com/magomedcoder/repo
+module github.com/gitwold/gitwold
 
 go 1.27.1
 

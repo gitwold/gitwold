@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/magomedcoder/repo/internal/delivery/http/middleware"
-	"github.com/magomedcoder/repo/internal/usecase"
+	"github.com/gitwold/gitwold/internal/delivery/http/middleware"
+	"github.com/gitwold/gitwold/internal/usecase"
 )
 
 type RepositoryHandler struct {

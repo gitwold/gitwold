@@ -322,21 +322,21 @@ git clone http://127.0.0.1:8080/user/work/backend/api.git
 # private / push - Basic auth with password or PAT
 git clone http://user:PASSWORD@127.0.0.1:8080/user/private-repo.git
 
-git clone http://user:repo_TOKEN@127.0.0.1:8080/user/private-repo.git
+git clone http://user:gitwold_TOKEN@127.0.0.1:8080/user/private-repo.git
 
-git push http://user:repo_TOKEN@127.0.0.1:8080/user/hello.git main
+git push http://user:gitwold_TOKEN@127.0.0.1:8080/user/hello.git main
 ```
 
 ## Git clone / push (SSH)
 
-The app listens for SSH on `:2222` by default (`REPO_SSH_ADDR`). Host keys are stored in `data/ssh/`. Auth is by registered public key; the SSH username is ignored.
+The app listens for SSH on `:2222` by default (`GITWOLD_SSH_ADDR`). Host keys are stored in `data/ssh/`. Auth is by registered public key; the SSH username is ignored.
 
 ```bash
 # custom port
 git clone ssh://git@127.0.0.1:2222/user/hello.git
 git clone ssh://git@127.0.0.1:2222/user/work/backend/api.git
 
-# if REPO_SSH_ADDR=:22
+# if GITWOLD_SSH_ADDR=:22
 git clone git@host:user/hello.git
 ```
 

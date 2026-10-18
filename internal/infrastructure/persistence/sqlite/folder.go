@@ -3,7 +3,7 @@ package sqlite
 import (
 	"time"
 
-	"github.com/magomedcoder/repo/internal/domain"
+	"github.com/gitwold/gitwold/internal/domain"
 	"gorm.io/gorm"
 )
 
@@ -212,6 +212,6 @@ func folderModelsToDomain(models []folderModel) []domain.Folder {
 	for _, m := range models {
 		out = append(out, m.toDomain())
 	}
-	
+
 	return out
 }
